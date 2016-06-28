@@ -4,9 +4,12 @@
 <h2>@ViewBag.Title</h2>
 <h3>@ViewBag.Message</h3>
 <p>
-    <input id="btnSaveGraph" type="button" Class="btn btn-default" value="Save Graph" />
-    <input id="btnLoadGraph" type="button" Class="btn btn-default" value="Load Graph" />
+    <input id="btnSaveGraph" type="button" Class="btn btn-default" value="Save Graph"/>
+    <input id="btnLoadGraph" type="button" Class="btn btn-default" value="Load Graph"/>
 </p>
+<div id="currentLocation">
+    
+</div>
 <div id="map" style="width: 100%; height: 800px; ; display: inline-block; border: solid 1px;">
 
 </div>
@@ -16,9 +19,18 @@
         var map;
         var drawingManagers = [];
         var shapes = [];
+        var vertices = [];
         var graph;
+        var edges;
+        var currentLocation;
 
-
+        var sampleTouristItems = [
+            { Name: "Loop Head", Lat: 52.56977888977089, Lng: -9.902825546874965 },
+            { Name: "Clifden", Lat: 53.42273136770883, Lng: -10.084099960937465 },
+            { Name: "Dingle", Lat: 52.14370931720791, Lng: -10.276360703124965 },
+            { Name: "Cork", Lat: 51.88677111225341, Lng: -8.474602890624965 },,
+            { Name: "Bantry", Lat: 51.607891457311275, Lng: -10.095086289062465 }
+        ];
 
 
         $(document).ready(function() {
@@ -36,24 +48,172 @@
             });
 
             loadGraph();
-            dropMarker(centre);
+            dropCurrentLocationMarker(centre);
+            dropSampleLocations();
 
         }
 
         function loadGraph() {
-            $.get("/Graphs/GetGraph", function (responseData) {
-                graph = responseData;
+            $.get("/Graphs/GetGraph", function(responseData) {
+                edges = responseData.Edges;
+
+                generateGraph();
+                // teh graph just conains Edges, what we need to do now is convert this into a graph object
+
             });
         }
 
-        function dropMarker(position)
-        {
+        // This function creates the graph from the edges that are provided
+        // From here we can take any vertice and link to another 
+        function generateGraph() {
+            graph = {
+                Vertices: [],
+                Edges: edges
+            }
+
+            var verticeHash = {}
+            for (var i = 0; i < edges.length; i++) {
+                var currentEdge = edges[i];
+                var verticeA = verticeHash[getKey(currentEdge.PointA)];
+                var verticeB = verticeHash[getKey(currentEdge.PointB)];
+                if (verticeA == null) {
+                    verticeA = {
+                        Point: currentEdge.PointA,
+                        Neighbours: []
+                    }
+                    verticeHash[getKey(currentEdge.PointA)] = verticeA;
+                    graph.Vertices.push(verticeA);
+                }
+
+                if (verticeB == null) {
+                    verticeB = {
+                        Point: currentEdge.PointB,
+                        Neighbours: []
+                    }
+                    verticeHash[getKey(currentEdge.PointB)] = verticeB;
+                    graph.Vertices.push(verticeB);
+                }
+
+
+                if (verticeA.Neighbours.find(function(item) {
+                    return getKey(item.Vertice.Point) == getKey(verticeB.Point);
+                }) == null) {
+                    verticeA.Neighbours.push({ Vertice: verticeB, Distance: currentEdge.Distance });
+                }
+
+                if (verticeB.Neighbours.find(function(item) {
+                    return getKey(item.Vertice.Point) == getKey(verticeA.Point);
+                }) == null) {
+                    verticeB.Neighbours.push({ Vertice: verticeA, Distance: currentEdge.Distance });
+                }
+
+            }
+        }
+
+
+        function getKey(point) {
+            return point.Lat + "_" + point.Lng;
+        }
+
+        function dropSampleLocations() {
+
+            $(sampleTouristItems).each(function(i, item) {
+
+                if (item != null) {
+                    if (item.Marker != null)
+                        item.Marker.setMap(null);
+
+                    item.Marker = new google.maps.Marker({
+                        position: { lat: item.Lat, lng: item.Lng },
+                        map: map,
+                        draggable: true,
+                        title: 'Move Me Around',
+                        icon: "https://developers.google.com/maps/documentation/javascript/examples/full/images/beachflag.png"
+                    });
+                    item.Marker.setMap(map);
+                }
+            });
+        }
+
+
+        function dropCurrentLocationMarker(position) {
             var marker = new google.maps.Marker({
                 position: position,
                 map: map,
                 draggable: true,
                 title: 'Move Me Around'
             });
+
+            google.maps.event.addListener(marker, 'dragend', function(e) {
+                setCurrentLocation(e.latLng.lat(), e.latLng.lng());
+                calculateDistances();
+
+            });
+        }
+
+        function setCurrentLocation(lat, lng) {
+            currentLocation = { Lat: lat, Lng: lng };
+            $("#currentLocation").html("Current Location : " + currentLocation.Lat + ", " + currentLocation.Lng);
+        }
+
+
+        function calculateDistances() {
+            for (var i = 0; i < sampleTouristItems.length; i++) {
+                var item = sampleTouristItems[i];
+                if (item != null) {
+                    item.Distance = calculateDistance(currentLocation, item, graph);
+                }
+            }
+
+        }
+
+        function calculateDistance(start, end, graph) {
+            // First step is to get the nearest vertices
+            var startVertice = getNearestVertice(start, graph);
+            var endVertice = getNearestVertice(end, graph);
+
+            return calculateDijkstra(startVertice, endVertice, graph);
+        }
+
+        function calculateDijkstra(start, end, graph) {
+            // First step is to get the nearest vertices
+
+        }
+
+
+        function getNearestVertice(point, graph) {
+            var bestMatch = null;
+            var bestDistance = 9999999999;
+            for (var i = 0; i < graph.Vertices.length; i++) {
+                var current = graph.Vertices[i];
+                var distance = getDistanceFromLatLonInKm(current.Point.Lat, current.Point.Lng, point.Lat, point.Lng);
+
+                if (bestMatch == null || distance<bestDistance) {
+                    bestMatch = current;
+                    bestDistance = distance;
+                } 
+            }
+
+            return bestMatch;
+
+        }
+
+
+        function getDistanceFromLatLonInKm(lat1, lon1, lat2, lon2) {
+            var R = 6371; // Radius of the earth in km
+            var dLat = deg2rad(lat2 - lat1); // deg2rad below
+            var dLon = deg2rad(lon2 - lon1);
+            var a =
+                Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                    Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) *
+                    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+            var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+            var d = R * c; // Distance in km
+            return d;
+        }
+
+        function deg2rad(deg) {
+            return deg * (Math.PI / 180);
         }
 
     </script>
