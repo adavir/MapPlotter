@@ -1,0 +1,124 @@
+﻿@{
+    ViewBag.Title = "Graphs";
+}
+<h2>@ViewBag.Title</h2>
+<h3>@ViewBag.Message</h3>
+<p>
+    <input id="btnSaveGraph" type="button" Class="btn btn-default" value="Save Graph" />
+    <input id="btnLoadGraph" type="button" Class="btn btn-default" value="Load Graph" />
+</p>
+    <div id="map" style="width: 100%; height: 800px; ; display: inline-block; border: solid 1px;">
+
+    </div>
+
+@section Scripts{
+    <script>
+        var map;
+        var drawingManagers = [];
+        var shapes = [];
+
+
+        $("#btnLoadGraph").click(function() {
+            loadGraph();
+        });
+
+
+        $("#btnSaveGraph").click(function() {
+
+            var postData = {
+                Shapes: []
+            };
+
+            for (var i = 0; i < shapes.length; i++) {
+                var points = shapes[i].getPath();
+                var shape = {
+                    Points: []
+                };
+
+                for (var j = 0; j < points.getLength(); j++) {
+                    shape.Points.push({
+                        Lat: points.getAt(j).lat(),
+                        Lng: points.getAt(j).lng()
+                    });
+                };
+
+                postData.Shapes.push(shape);
+            }
+
+            $.post("/Graphs/SaveGraph", postData, function(responseData) {
+                // $(".result").html(data);
+                clearShapes();
+                loadGraph();
+
+            });
+        });
+
+
+        $(document).ready(function() {
+            var geocoder = new google.maps.Geocoder();
+
+            geocoder.geocode({ 'address': "Ireland" }, function(results, status) {
+                createMap(results[0].geometry.location);
+            });
+        });
+
+        function createMap(centre) {
+            map = new google.maps.Map(document.getElementById('map'), {
+                center: centre,
+                zoom: 8
+            });
+
+            enableDrawShape(map, function(shape) {
+            });
+        }
+
+        function loadGraph() {
+            $.get("/Graphs/GetShapes", function (responseData) {
+                $(responseData.Shapes).each(function (i, shape) {
+                    var path = []
+                    for (var j = 0; j < shape.Points.length; j++) {
+                        path.push(new google.maps.LatLng(shape.Points[j].Lat, shape.Points[j].Lng));
+                    }
+                    var polyLine = new google.maps.Polyline({
+                        path: path
+                    });
+                    shapes.push(polyLine);
+                    polyLine.setMap(map);
+                });
+            });
+        }
+
+        function clearShapes() {
+            $(shapes).each(function (index, item) {
+                item.setMap(null);
+            });
+        }
+
+        function enableDrawShape(map) {
+            var drawingManager = new google.maps.drawing.DrawingManager({
+                drawingMode: google.maps.drawing.OverlayType.POLYLINE,
+                drawingControl: true,
+                drawingControlOptions: {
+                    position: google.maps.ControlPosition.TOP_CENTER,
+                    drawingModes: [
+                        google.maps.drawing.OverlayType.POLYLINE
+                    ]
+                }
+            });
+
+            google.maps.event.addListener(drawingManager, 'overlaycomplete', function(e) {
+
+                shapes.push(e.overlay);
+
+            });
+
+
+            drawingManager.setMap(map);
+            drawingManagers.push(drawingManager);
+        }
+
+
+    </script>
+}
+
+
