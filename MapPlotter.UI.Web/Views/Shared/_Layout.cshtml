@@ -5,7 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>@ViewBag.Title - My ASP.NET Application</title>
     @Styles.Render("~/Content/css")
-    @Scripts.Render("~/bundles/modernizr")
+        @Scripts.Render("~/bundles/modernizr")
+        @Scripts.Render("~/bundles/lib")
    
 </head>
 <body>
@@ -39,7 +40,7 @@
 
     @Scripts.Render("~/bundles/jquery")
     @Scripts.Render("~/bundles/bootstrap")
-    <script src='https://maps.googleapis.com/maps/api/js?key=AIzaSyAqVHpBqt-78xLoHwTj5nkdAi0zlL9Y4EY'></script>
+    <script src='https://maps.googleapis.com/maps/api/js?key=AIzaSyAqVHpBqt-78xLoHwTj5nkdAi0zlL9Y4EY&libraries=drawing'></script>
     @RenderSection("scripts", required: false)
     
 </body>

@@ -73,8 +73,8 @@
         }
 
         function loadGraph() {
-            $.get("/Graphs/GetShapes", function (responseData) {
-                $(responseData.Shapes).each(function (i, shape) {
+            $.get("/Graphs/GetShapes", function(responseData) {
+                $(responseData.Shapes).each(function(i, shape) {
                     var path = []
                     for (var j = 0; j < shape.Points.length; j++) {
                         path.push(new google.maps.LatLng(shape.Points[j].Lat, shape.Points[j].Lng));
@@ -89,7 +89,7 @@
         }
 
         function clearShapes() {
-            $(shapes).each(function (index, item) {
+            $(shapes).each(function(index, item) {
                 item.setMap(null);
             });
         }

@@ -120,16 +120,42 @@
             $(sampleTouristItems).each(function(i, item) {
 
                 if (item != null) {
-                    if (item.Marker != null)
+                    if (item.Marker != null) 
                         item.Marker.setMap(null);
 
+                    if (item.Polyline != null)
+                        item.Polyline.setMap(null);
                     item.Marker = new google.maps.Marker({
                         position: { lat: item.Lat, lng: item.Lng },
                         map: map,
-                        draggable: true,
+                        draggable: false,
                         title: 'Move Me Around',
                         icon: "https://developers.google.com/maps/documentation/javascript/examples/full/images/beachflag.png"
                     });
+
+                    if (item.ShortestPath != null) {
+                        item.Marker.info = new google.maps.InfoWindow({
+                            content: '<b>Distance:</b> : ' + item.ShortestPath.Distance
+                        });
+                        google.maps.event.addListener(item.Marker, 'click', function() {
+                            item.Marker.info.open(map, item.Marker);
+                            var path = [];
+                            for (var i = 0; i < item.ShortestPath.Path.length; i++) {
+                                var node = item.ShortestPath.Path[i];
+                                path.push(new google.maps.LatLng(node.Vertice.Point.Lat, node.Vertice.Point.Lng));
+
+                            }
+
+                            item.Polyline = new google.maps.Polyline({
+                                path: path
+                            });
+
+                            item.Polyline.setMap(map);
+
+                        });
+                    }
+
+
                     item.Marker.setMap(map);
                 }
             });
@@ -147,7 +173,7 @@
             google.maps.event.addListener(marker, 'dragend', function(e) {
                 setCurrentLocation(e.latLng.lat(), e.latLng.lng());
                 calculateDistances();
-
+                dropSampleLocations();
             });
         }
 
@@ -161,23 +187,21 @@
             for (var i = 0; i < sampleTouristItems.length; i++) {
                 var item = sampleTouristItems[i];
                 if (item != null) {
-                    item.Distance = calculateDistance(currentLocation, item, graph);
+                    item.ShortestPath = getShortestPath(currentLocation, item, graph);
                 }
             }
 
         }
 
-        function calculateDistance(start, end, graph) {
+        function getShortestPath(start, end, graph) {
             // First step is to get the nearest vertices
             var startVertice = getNearestVertice(start, graph);
             var endVertice = getNearestVertice(end, graph);
 
-            return calculateDijkstra(startVertice, endVertice, graph);
-        }
-
-        function calculateDijkstra(start, end, graph) {
-            // First step is to get the nearest vertices
-
+            var dijkstra = new Dijkstra(graph);
+            dijkstra.Execute(startVertice);
+            var path = dijkstra.getPath(endVertice);
+            return path;
         }
 
 
@@ -188,10 +212,10 @@
                 var current = graph.Vertices[i];
                 var distance = getDistanceFromLatLonInKm(current.Point.Lat, current.Point.Lng, point.Lat, point.Lng);
 
-                if (bestMatch == null || distance<bestDistance) {
+                if (bestMatch == null || distance < bestDistance) {
                     bestMatch = current;
                     bestDistance = distance;
-                } 
+                }
             }
 
             return bestMatch;
