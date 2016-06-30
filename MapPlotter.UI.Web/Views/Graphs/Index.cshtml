@@ -73,8 +73,10 @@
         }
 
         function loadGraph() {
-            $.get("/Graphs/GetShapes", function(responseData) {
-                $(responseData.Shapes).each(function(i, shape) {
+            $.get("/Graphs/GetShapes", function (responseData) {
+                shapes = [];
+                $(responseData.Shapes).each(function (i, shape) {
+
                     var path = []
                     for (var j = 0; j < shape.Points.length; j++) {
                         path.push(new google.maps.LatLng(shape.Points[j].Lat, shape.Points[j].Lng));
@@ -84,6 +86,8 @@
                     });
                     shapes.push(polyLine);
                     polyLine.setMap(map);
+                    google.maps.event.addListener(polyLine, 'click', onPolylineClicked);
+                  
                 });
             });
         }
@@ -94,6 +98,10 @@
             });
         }
 
+
+        function onPolylineClicked() {
+            this.setEditable(!this.editable);
+        }
         function enableDrawShape(map) {
             var drawingManager = new google.maps.drawing.DrawingManager({
                 drawingMode: google.maps.drawing.OverlayType.POLYLINE,

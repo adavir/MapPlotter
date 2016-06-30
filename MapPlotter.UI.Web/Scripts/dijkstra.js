@@ -45,7 +45,7 @@
         }
     }
 
-
+    // Calcates the distance between this node and every other node
     this.findMinimalDistances = function(node) {
         var adjacentNodes = [];
 

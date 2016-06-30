@@ -135,6 +135,14 @@ namespace MapPlotter.UI.Web.Controllers
                     sw.WriteLine($"{edge.PointA.Lat},{edge.PointA.Lng},{edge.PointB.Lat},{edge.PointB.Lng},{edge.Distance},{edge.ShapeId}");
                 }
             }
+
+            using (var sw = new StreamWriter(Server.MapPath($"~/App_Data/Shapes/BakeIn_{fileName}"), false))
+            {
+                foreach (var edge in edges)
+                {
+                    sw.WriteLine($"{edge.PointA.Lat},{edge.PointA.Lng},{edge.PointB.Lat},{edge.PointB.Lng},{edge.Distance}");
+                }
+            }
         }
 
 
